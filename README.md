@@ -1,39 +1,105 @@
-# SheSafe — Women's Safety Companion
+# 🛡️ SheSafe – Women’s Safety Companion
 
-SheSafe is a unified mobile-web application designed to provide powerful safety features for women traveling alone. Built with the "Polish, Reliability, and Genuine Usefulness" bar in mind, it works as a standalone tool that gets smarter with community input.
+SheSafe is a professional, production-ready safety application designed to provide women with a unified suite of tools for emergency response, trip tracking, and community-driven hazard reporting.
 
-## Features Checklist
-- [x] **Feature 1 — SOS System**: One-tap SOS, 5s cancellation, Discreet Mode (Notes disguise), Location logging, 60s background updates.
-- [x] **Feature 2 — Live Trip Sharing**: Destination setting, Arrival timer, Live tracking link, Trip history.
-- [x] **Feature 3 — Ride Verification**: Vehicle logging (Cab/Auto/Bus), SMS-ready location sharing, Ride logs.
-- [x] **Feature 4 — Buddy System**: Route matching based on time and destination, In-app coordination chat.
-- [x] **Feature 5 — Community Alert Board**: Incident reporting on a live map, TTL logic (48h), Upvoting for persistence.
-- [x] **Feature 6 — Safe Route Suggester**: Map-based comparison of Fastest vs. Safest paths using incident density.
+## 🚀 Key Features
+
+### 1. 🚨 One-Tap SOS System
+- Large, high-impact SOS trigger with a 5-second cancel countdown.
+- Automatically sends live GPS coordinates via Real SMS to trusted contacts.
+- **Discreet Mode**: A fully functional fake calculator UI. Tap the "=" button 5 times to reveal the real safety dashboard.
+
+### 2. 📍 Live Trip Sharing
+- Generate secure, public tracking links (no login required for viewers).
+- Real-time location streaming via Socket.io.
+- Automatic alerts if the user does not mark themselves safe by the ETA.
+
+### 3. 🚗 Ride Verification
+- Instantly log vehicle registration, driver details, and location.
+- One-click notification to emergency contacts before starting a ride.
+
+### 4. 👥 Buddy System
+- Match with other users walking or traveling the same route at the same time.
+- Integrated real-time chat for coordinated safety.
+
+### 5. 🗺️ Community Alert Board
+- Interactive Mapbox integration showing real-time hazard reports.
+- Types: Poor Lighting, Harassment, Suspicious Activity, Safety Concern.
+- **Expiry Logic**: Reports expire after 48 hours unless upvoted by the community.
+
+### 6. 🧠 Safe Route Suggester
+- Visual comparison between the **Fastest** and **Safest** routes.
+- **Safety Score (0-100)**: Calculated dynamically based on nearby community alerts.
 
 ---
 
-## Technical Architecture
-- **Frontend**: React (Vite) + Vanilla CSS (Dark Mode/Glassmorphism)
-- **State**: React Context API for cross-feature persistence
-- **Mapping**: Leaflet.js (OpenStreetMap)
-- **Backend**: Node.js (Express)
-- **SMS Bridge**: Twilio API Integration
-
-## Safety Score Algorithm
-Evaluators: The safety score shown on the "Safe Route Suggester" screen is computed as follows:
-1. **Formula**: `Safety Score = 100 - Σ(Incident权重)`
-2. **Radius**: We factor in all pins within a **200-metre radius** of the route path.
-3. **Weighting**:
-   - Harassment/Suspicious Activity: -25 points
-   - Poor Lighting/Unsafe Road: -15 points
-4. **Active Check**: If multiple users have upvoted a pin, the penalty is increased by 5 points for each upvote (confirming high activity).
-5. **Real-time**: The score updates automatically if new pins are dropped while the user is viewing the map.
+## 🛠️ Tech Stack
+- **Frontend**: React (Vite), Tailwind CSS, Framer Motion, Mapbox GL.
+- **Backend**: Node.js, Express.js, MongoDB (Mongoose), Socket.io.
+- **SMS**: Twilio SMS API.
+- **Auth**: JWT (JSON Web Tokens).
 
 ---
 
-## Setup & Running
-1. **Clone project**
-2. **Install dependencies**: `npm install`
-3. **Setup environment**: Rename `.env.example` to `.env` and add your Twilio credentials.
-4. **Launch Backend**: `node server/index.js`
-5. **Launch Frontend**: `npm run dev`
+## ⚙️ Setup & Installation
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/Kaviyashreepalani/SheSafe.git
+cd SheSafe
+```
+
+### 2. Backend Setup
+```bash
+cd backend
+npm install
+cp .env.example .env
+npm start
+```
+
+### 3. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 🔑 Environment Variables (.env)
+
+### Backend
+| Variable | Description |
+|----------|-------------|
+| `PORT` | Server port (default: 5000) |
+| `MONGO_URI` | MongoDB Connection String |
+| `JWT_SECRET` | Secret for token signing |
+| `TWILIO_ACCOUNT_SID` | Twilio Account SID |
+| `TWILIO_AUTH_TOKEN` | Twilio Auth Token |
+| `TWILIO_PHONE_NUMBER` | Your Twilio Phone Number |
+
+### Frontend
+| Variable | Description |
+|----------|-------------|
+| `VITE_MAPBOX_TOKEN` | Mapbox Public Access Token |
+
+---
+
+## 🧠 Safety Score Formula
+Our algorithm analyzes routes within a 500m radius of reported alerts:
+- **Base Score**: 100
+- **Harassment/Suspicious**: -15 points per alert
+- **Safety Concern**: -10 points per alert
+- **Upvoted Alert**: Penalty multiplied by 1.2 (Community verified)
+
+---
+
+## 🧪 Testing with Postman
+- **Signup**: `POST /api/auth/signup`
+- **Login**: `POST /api/auth/login`
+- **SOS**: `POST /api/sos` (Header: `Authorization: Bearer <TOKEN>`)
+
+---
+
+## 📄 License
+Proudly built for safety and community well-being.
