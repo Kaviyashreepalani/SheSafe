@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Shield, Phone, Lock, User, Plus, X, ArrowRight } from "lucide-material";
+import { Shield, Phone, Lock, User, Plus, X, ArrowRight } from "lucide-react";
 import { toast } from "react-toastify";
 import axios from "axios";
 
@@ -10,6 +10,8 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [contacts, setContacts] = useState([{ name: "", phone: "" }]);
   const navigate = useNavigate();
+
+  const API = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
   const handleAddContact = () => {
     setContacts([...contacts, { name: "", phone: "" }]);
@@ -27,32 +29,55 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // 🔥 BASIC VALIDATION (prevents backend crash)
+    if (!name || !phone || !password) {
+      return toast.error("Please fill all required fields");
+    }
+
+    if (contacts.some(c => !c.name || !c.phone)) {
+      return toast.error("Please fill all emergency contacts properly");
+    }
+
     try {
-      await axios.post("http://localhost:5000/api/auth/signup", {
+      const response = await axios.post(`${API}/auth/signup`, {
         name,
         phone,
         password,
-        emergencyContacts: contacts.filter(c => c.name && c.phone)
+        emergencyContacts: contacts,
       });
+
       toast.success("Account created successfully!");
       navigate("/login");
+
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to create account");
+      console.error("Signup error:", err);
+
+      toast.error(
+        err.response?.data?.message ||
+        err.message ||
+        "Signup failed. Try again."
+      );
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 py-12">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 border border-slate-100">
+
+        {/* Header */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg mb-4">
             <Shield size={32} className="text-white" />
           </div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Join SheSafe</h1>
-          <p className="text-slate-500 font-medium">Secure your journey today</p>
+          <h1 className="text-3xl font-black text-slate-900">Join SheSafe</h1>
+          <p className="text-slate-500">Secure your journey today</p>
         </div>
 
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+
+          {/* Name */}
           <div className="relative">
             <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -60,11 +85,12 @@ const Signup = () => {
               placeholder="Full Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4"
               required
             />
           </div>
 
+          {/* Phone */}
           <div className="relative">
             <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -72,11 +98,12 @@ const Signup = () => {
               placeholder="Phone Number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4"
               required
             />
           </div>
 
+          {/* Password */}
           <div className="relative">
             <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -84,69 +111,80 @@ const Signup = () => {
               placeholder="Create Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4"
               required
             />
           </div>
 
+          {/* Contacts */}
           <div className="pt-4">
-            <label className="text-sm font-bold text-slate-700 mb-2 block uppercase tracking-wider">Emergency Contacts</label>
+            <label className="text-sm font-bold text-slate-700 block mb-2">
+              Emergency Contacts
+            </label>
+
             {contacts.map((contact, index) => (
-              <div key={index} className="flex gap-2 mb-2 group">
+              <div key={index} className="flex gap-2 mb-2">
+
                 <input
                   type="text"
                   placeholder="Name"
                   value={contact.name}
-                  onChange={(e) => handleContactChange(index, "name", e.target.value)}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  onChange={(e) =>
+                    handleContactChange(index, "name", e.target.value)
+                  }
+                  className="flex-1 bg-slate-50 border rounded-xl px-4 py-2"
                   required
                 />
+
                 <input
                   type="text"
                   placeholder="Phone"
                   value={contact.phone}
-                  onChange={(e) => handleContactChange(index, "phone", e.target.value)}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  onChange={(e) =>
+                    handleContactChange(index, "phone", e.target.value)
+                  }
+                  className="flex-1 bg-slate-50 border rounded-xl px-4 py-2"
                   required
                 />
+
                 {contacts.length > 1 && (
                   <button
                     type="button"
                     onClick={() => handleRemoveContact(index)}
-                    className="p-2 text-slate-400 hover:text-danger rounded-xl hover:bg-slate-100 transition-colors"
                   >
                     <X size={18} />
                   </button>
                 )}
               </div>
             ))}
+
             <button
               type="button"
               onClick={handleAddContact}
-              className="text-primary text-sm font-bold flex items-center hover:bg-primary/5 p-2 rounded-xl transition-all"
+              className="text-primary flex items-center mt-2"
             >
-              <Plus size={16} className="mr-1" />
-              Add Another Contact
+              <Plus size={16} /> Add Contact
             </button>
           </div>
 
+          {/* Submit */}
           <button
             type="submit"
-            className="w-full bg-primary hover:bg-secondary text-white font-bold py-4 rounded-2xl flex items-center justify-center transition-all shadow-lg hover:shadow-primary/30 mt-4"
+            className="w-full bg-primary text-white py-4 rounded-2xl mt-4 flex items-center justify-center"
           >
-            <span>JOIN NOW</span>
-            <ArrowRight size={20} className="ml-2" />
+            JOIN NOW <ArrowRight size={20} className="ml-2" />
           </button>
+
         </form>
 
-        <div className="mt-8 text-center">
-          <p className="text-slate-500 font-medium">
-            Already have an account?{" "}
-            <Link to="/login" className="text-primary font-bold hover:underline">
-              Log In
-            </Link>
-          </p>
+        {/* Footer */}
+        <div className="mt-6 text-center">
+          Already have an account?{" "}
+          <Link to="/login" className="text-primary font-bold">
+            Log In
+          </Link>
         </div>
+
       </div>
     </div>
   );
