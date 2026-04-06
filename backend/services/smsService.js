@@ -16,17 +16,21 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const sendSMS = async (phoneNumbers, message) => {
     const results = [];
     for (let number of phoneNumbers) {
-        // Ensure E.164 format (must start with +)
-        if (!number.startsWith('+')) {
-            number = `+${number.trim()}`;
+        if (!number) {
+            console.warn('⚠️ Skipping empty phone number');
+            continue;
         }
+
+        // Ensure E.164 format (must start with +)
+        const cleanNumber = number.toString().trim();
+        let formattedNumber = cleanNumber.startsWith('+') ? cleanNumber : `+${cleanNumber}`;
         
         try {
-            console.log(`📤 Sending SMS to: ${number}...`);
+            console.log(`📤 Sending SMS to: ${formattedNumber}...`);
             const msg = await client.messages.create({
                 body: message,
                 from: TWILIO_PHONE,
-                to: number,
+                to: formattedNumber,
             });
             console.log(`✅ SMS Sent! SID: ${msg.sid}`);
             results.push({ number, sid: msg.sid, status: 'sent' });

@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 exports.startTrip = async (req, res) => {
     try {
         const { destination, expectedArrival, lat, lng, origin } = req.body;
+        console.log('📝 StartTrip Request:', { destination, expectedArrival, lat, lng, origin });
 
         // Validation
         if (!destination || !expectedArrival) {
@@ -15,11 +16,16 @@ exports.startTrip = async (req, res) => {
 
         const arrivalDate = new Date(expectedArrival);
         if (isNaN(arrivalDate.getTime())) {
+            console.error('❌ Invalid Date:', expectedArrival);
             return res.status(400).json({ message: 'Invalid arrival time format' });
         }
 
-        if (arrivalDate <= new Date()) {
-            return res.status(400).json({ message: 'Expected arrival must be in the future' });
+        // Allow a small grace period (5 mins) for clock drift
+        const now = new Date();
+        const driftGrace = 5 * 60 * 1000;
+        if (arrivalDate.getTime() + driftGrace <= now.getTime()) {
+            console.warn('⚠️ Past arrival time provided:', arrivalDate, 'Now:', now);
+            return res.status(400).json({ message: 'Arrival time cannot be in the past' });
         }
 
         const user = await User.findById(req.user.id);
@@ -32,21 +38,29 @@ exports.startTrip = async (req, res) => {
             origin: origin || 'Current Location',
             expectedArrival: arrivalDate,
             trackingId,
-            startLat: lat,
-            startLng: lng,
-            currentLat: lat,
-            currentLng: lng,
+            startLat: lat || 0,
+            startLng: lng || 0,
+            currentLat: lat || 0,
+            currentLng: lng || 0,
             routeHistory: (lat && lng) ? [{ lat, lng }] : [],
         });
 
+        console.log('✅ Trip created:', trip._id, 'TrackingID:', trackingId);
+
+        console.log('✅ Trip created:', trip._id, 'TrackingId:', trackingId);
+
         // Alert contacts
-        const contactPhones = user.emergencyContacts.map(c => c.phone);
-        if (contactPhones.length > 0) {
-            try {
-                await sendTripStartAlert(contactPhones, user.name, destination, trackingId);
-            } catch (smsErr) {
-                console.error('⚠️ Trip start SMS failed:', smsErr.message);
-                // Don't fail the whole request if only SMS fails
+        if (user.emergencyContacts && user.emergencyContacts.length > 0) {
+            const contactPhones = user.emergencyContacts
+                .filter(c => c.phone) // Ensure phone exists
+                .map(c => c.phone);
+                
+            if (contactPhones.length > 0) {
+                try {
+                    await sendTripStartAlert(contactPhones, user.name, destination, trackingId);
+                } catch (smsErr) {
+                    console.error('⚠️ Trip start SMS failed:', smsErr.message);
+                }
             }
         }
 
@@ -86,7 +100,11 @@ exports.startTrip = async (req, res) => {
         });
     } catch (err) {
         console.error('❌ startTrip Error:', err);
-        res.status(500).json({ message: 'Server error', error: err.message });
+        res.status(500).json({ 
+            message: 'Server error: ' + err.message, 
+            error: err.message,
+            stack: err.stack 
+        });
     }
 };
 

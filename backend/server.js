@@ -87,6 +87,11 @@ setInterval(async () => {
         }).populate('userId', 'name emergencyContacts');
 
         for (const trip of overdueTrips) {
+            if (!trip.userId) {
+                console.warn(`⚠️ Overdue trip ${trip._id} has no valid user. Skipping.`);
+                continue;
+            }
+
             console.log(`⚠️ Overdue trip detected for ${trip.userId.name}. Destination: ${trip.destination}`);
             
             trip.status = 'overdue';
