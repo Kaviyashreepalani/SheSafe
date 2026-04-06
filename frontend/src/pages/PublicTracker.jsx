@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import MapContainer from '../components/MapContainer';
+import { useSocket } from '../context/SocketContext';
 
 const StatusBadge = ({ status }) => {
   const map = {
@@ -24,11 +25,39 @@ export default function PublicTracker() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const { socket, connected } = useSocket();
+  const fetchRef = useRef(false);
+
   useEffect(() => {
-    fetchTrip();
-    const interval = setInterval(fetchTrip, 30000); // Poll every 30s
-    return () => clearInterval(interval);
+    if (!fetchRef.current) {
+        fetchTrip();
+        fetchRef.current = true;
+    }
   }, [trackingId]);
+
+  useEffect(() => {
+    if (socket && trip?.trackingId) {
+        socket.emit('join-trip', trip.trackingId);
+
+        socket.on('location-update', (data) => {
+            setTrip(prev => ({
+                ...prev,
+                currentLat: data.lat,
+                currentLng: data.lng,
+                routeHistory: [...(prev.routeHistory || []), { lat: data.lat, lng: data.lng }]
+            }));
+        });
+
+        socket.on('trip-completed', () => {
+            setTrip(prev => ({ ...prev, status: 'completed' }));
+        });
+
+        return () => {
+            socket.off('location-update');
+            socket.off('trip-completed');
+        };
+    }
+  }, [socket, trip?.trackingId]);
 
   const fetchTrip = async () => {
     try {
@@ -139,6 +168,7 @@ export default function PublicTracker() {
         >
           <MapContainer 
             center={trip?.currentLat ? [trip.currentLng, trip.currentLat] : [77.209, 28.613]} 
+            route={trip?.routeHistory?.map(p => [p.lng, p.lat]) || []}
             markers={trip?.currentLat ? [{
               latitude: trip.currentLat,
               longitude: trip.currentLng,

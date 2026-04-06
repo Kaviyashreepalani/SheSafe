@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import MapContainer from '../components/MapContainer';
+import { useSocket } from '../context/SocketContext';
 
 const BackArrow = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
@@ -64,13 +66,21 @@ export default function LiveTrip() {
       setTrackingLink(res.data.trackingLink);
       setPhase('active');
 
-      // Stream location every 30s
+      // Stream location every 10s
       locationIntervalRef.current = setInterval(async () => {
         try {
           const loc = await getLocation();
-          await axios.patch(`/api/trips/${res.data.trip._id}/location`, loc);
-        } catch { }
-      }, 30000);
+          const updateRes = await axios.patch(`/api/trips/${res.data.trip._id}/location`, loc);
+          setTrip(prev => ({ 
+            ...prev, 
+            currentLat: loc.lat, 
+            currentLng: loc.lng,
+            routeHistory: [...prev.routeHistory, { lat: loc.lat, lng: loc.lng }]
+          }));
+        } catch (err) {
+          console.error('Location update failed:', err);
+        }
+      }, 10000);
     } catch (err) {
       setError(err.response?.data?.message || 'Could not start trip. Check GPS permissions.');
     } finally {
@@ -194,12 +204,19 @@ export default function LiveTrip() {
                 </p>
               </div>
 
-              {/* Live map placeholder — replace with MapContainer when Mapbox token is set */}
-              <div className="card h-48 flex items-center justify-center border-dashed">
-                <div className="text-center">
-                  <div className="text-3xl mb-2">📍</div>
-                  <p className="text-sm text-white/40">Live map — add <code className="text-primary-400 text-xs">VITE_MAPBOX_TOKEN</code> to .env</p>
-                </div>
+              {/* Live map */}
+              <div className="h-64 rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative">
+                <MapContainer 
+                  center={trip?.currentLat ? [trip.currentLng, trip.currentLat] : [77.209, 28.613]} 
+                  route={trip?.routeHistory?.map(p => [p.lng, p.lat]) || []}
+                  markers={trip?.currentLat ? [{
+                    latitude: trip.currentLat,
+                    longitude: trip.currentLng,
+                    type: 'primary',
+                    title: 'Your Location',
+                    description: 'Traveling to ' + trip.destination
+                  }] : []}
+                />
               </div>
             </motion.div>
           )}

@@ -74,10 +74,19 @@ const sendTripOverdueAlert = async (contacts, userName, destination, lat, lng) =
     return sendSMS(contacts, message);
 };
 
+/**
+ * Send trip safe confirmation
+ */
+const sendTripSafeAlert = async (contacts, userName) => {
+    const message = `SAFE ARRIVAL: ${userName.toUpperCase()} has marked themselves safe and ended their trip. Thank you for using SheSafe.`;
+    return sendSMS(contacts, message);
+};
+
 module.exports = {
     sendSMS,
     sendSOSAlert,
     sendRideAlert,
     sendTripStartAlert,
     sendTripOverdueAlert,
+    sendTripSafeAlert,
 };

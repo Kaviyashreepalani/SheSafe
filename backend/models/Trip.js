@@ -12,6 +12,7 @@ const tripSchema = new mongoose.Schema({
         enum: ['active', 'completed', 'overdue'],
         default: 'active',
     },
+    isSafe: { type: Boolean, default: false },
     startLat: Number,
     startLng: Number,
     currentLat: Number,

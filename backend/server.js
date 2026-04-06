@@ -72,6 +72,48 @@ io.on('connection', (socket) => {
     });
 });
 
+// Periodic Overdue Trip Checker (runs every 60s)
+const Trip = require('./models/Trip');
+const { sendTripOverdueAlert } = require('./services/smsService');
+
+setInterval(async () => {
+    try {
+        const gracePeriod = 10 * 60 * 1000; // 10 minutes
+        const overdueThreshold = new Date(Date.now() - gracePeriod);
+
+        const overdueTrips = await Trip.find({
+            status: 'active',
+            expectedArrival: { $lt: overdueThreshold }
+        }).populate('userId', 'name emergencyContacts');
+
+        for (const trip of overdueTrips) {
+            console.log(`⚠️ Overdue trip detected for ${trip.userId.name}. Destination: ${trip.destination}`);
+            
+            trip.status = 'overdue';
+            await trip.save();
+
+            const contacts = trip.userId.emergencyContacts.map(c => c.phone);
+            if (contacts.length > 0) {
+                await sendTripOverdueAlert(
+                    contacts,
+                    trip.userId.name,
+                    trip.destination,
+                    trip.currentLat,
+                    trip.currentLng
+                );
+            }
+
+            io.to(`trip-${trip.trackingId}`).emit('trip-overdue', { 
+                tripId: trip._id, 
+                userName: trip.userId.name 
+            });
+            io.emit('global-alert', { message: `Trip overdue: ${trip.userId.name}` });
+        }
+    } catch (err) {
+        console.error('❌ Overdue checker error:', err);
+    }
+}, 60000);
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`🚀 SheSafe server running on port ${PORT}`);

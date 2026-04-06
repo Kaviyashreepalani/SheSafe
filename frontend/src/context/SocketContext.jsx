@@ -10,14 +10,17 @@ export const SocketProvider = ({ children }) => {
     const [connected, setConnected] = useState(false);
 
     useEffect(() => {
-        if (!token) return;
-
+        // Initialize socket - allow connection without token for public tracking
         socketRef.current = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000', {
-            auth: { token },
+            auth: token ? { token } : {},
             transports: ['websocket'],
         });
 
-        socketRef.current.on('connect', () => setConnected(true));
+        socketRef.current.on('connect', () => {
+            console.log('🔌 Socket connected locally');
+            setConnected(true);
+        });
+        
         socketRef.current.on('disconnect', () => setConnected(false));
 
         return () => {

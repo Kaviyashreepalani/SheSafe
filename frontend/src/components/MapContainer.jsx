@@ -4,7 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 // ✅ Set Mapbox Access Token (User to provide in .env)
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
-const MapContainer = ({ markers = [], center = [77.209, 28.613], interactive = true }) => {
+const MapContainer = ({ markers = [], route = [], center = [77.209, 28.613], interactive = true }) => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
 
@@ -17,6 +17,43 @@ const MapContainer = ({ markers = [], center = [77.209, 28.613], interactive = t
       interactive: interactive
     });
 
+    mapRef.current.on('load', () => {
+      // Add route line if provided
+      if (route && route.length > 1) {
+        mapRef.current.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: route
+            }
+          }
+        });
+
+        mapRef.current.addLayer({
+          id: 'route',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#f43f5e', // primary-500
+            'line-width': 4,
+            'line-opacity': 0.8
+          }
+        });
+
+        // Fit map to route
+        const bounds = new mapboxgl.LngLatBounds();
+        route.forEach(coord => bounds.extend(coord));
+        mapRef.current.fitBounds(bounds, { padding: 40 });
+      }
+    });
+
     // Add navigation control
     if (interactive) {
       mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
@@ -25,7 +62,7 @@ const MapContainer = ({ markers = [], center = [77.209, 28.613], interactive = t
     // Add markers
     markers.forEach((marker) => {
       const el = document.createElement("div");
-      el.className = `marker ${marker.type === "alert" ? "bg-danger" : "bg-primary"} w-6 h-6 rounded-full border-2 border-white shadow-lg animate-pulse`;
+      el.className = `marker ${marker.type === "alert" ? "bg-red-500" : "bg-primary-500"} w-5 h-5 rounded-full border-2 border-white shadow-lg ${marker.type === 'alert' ? 'animate-bounce' : 'animate-pulse'}`;
 
       new mapboxgl.Marker(el)
         .setLngLat([marker.longitude, marker.latitude])
@@ -34,7 +71,7 @@ const MapContainer = ({ markers = [], center = [77.209, 28.613], interactive = t
     });
 
     return () => mapRef.current.remove();
-  }, [markers, center, interactive]);
+  }, [markers, route, center, interactive]);
 
   return (
     <div className="relative w-full h-full rounded-2xl overflow-hidden border border-slate-200">
