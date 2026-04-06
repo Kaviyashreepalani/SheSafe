@@ -1,25 +1,32 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const tripSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     destination: { type: String, required: true },
-    eta: { type: Date, required: true },
-    trackingToken: { type: String, unique: true, required: true },
-    status: { type: String, enum: ["Active", "Safe", "Alert"], default: "Active" },
-    locationLog: [
+    origin: { type: String },
+    expectedArrival: { type: Date, required: true },
+    trackingId: { type: String, default: uuidv4, unique: true },
+    status: {
+        type: String,
+        enum: ['active', 'completed', 'overdue'],
+        default: 'active',
+    },
+    startLat: Number,
+    startLng: Number,
+    currentLat: Number,
+    currentLng: Number,
+    routeHistory: [
         {
-            latitude: { type: Number },
-            longitude: { type: Number },
-            timestamp: { type: Date, default: Date.now }
-        }
+            lat: Number,
+            lng: Number,
+            timestamp: { type: Date, default: Date.now },
+        },
     ],
-    contactsToNotify: [
-        {
-            name: { type: String },
-            phone: { type: String }
-        }
-    ],
-    createdAt: { type: Date, default: Date.now }
+    startTime: { type: Date, default: Date.now },
+    endTime: Date,
+    safeConfirmedAt: Date,
+    createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("Trip", tripSchema);
+module.exports = mongoose.model('Trip', tripSchema);

@@ -1,14 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const {
-    createBuddyRequest,
-    findBuddies,
-    matchBuddy
-} = require("../controllers/buddyController");
-const { protect } = require("../middleware/authMiddleware");
 
-router.post("/", protect, createBuddyRequest);
-router.get("/find", protect, findBuddies);
-router.put("/match/:requestId", protect, matchBuddy);
+// ✅ CHANGE THIS
+const buddyController = require("../controllers/buddyController");
+
+const auth = require("../middleware/authMiddleware");
+
+router.post("/", auth, buddyController.createBuddyRequest);
+router.get("/find", auth, buddyController.findBuddies);
+router.put("/match/:requestId", auth, buddyController.matchBuddy);
 
 module.exports = router;

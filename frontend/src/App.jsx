@@ -1,46 +1,72 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Community from "./pages/Community";
-import LiveTrip from "./pages/LiveTrip";
-import Buddies from "./pages/Buddies";
-import RouteSuggester from "./pages/RouteSuggester";
-import RideVerification from "./pages/RideVerification";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 
-const ProtectedRoute = ({ children }) => {
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
+import LiveTrip from './pages/LiveTrip';
+import RideVerification from './pages/RideVerification';
+import Buddies from './pages/Buddies';
+import Community from './pages/Community';
+import RouteSuggester from './pages/RouteSuggester';
+import PublicTracker from './pages/PublicTracker';
+import Calculator from './components/Calculator';
+
+// Protected route wrapper
+const Protected = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="h-screen w-screen flex items-center justify-center text-primary font-black animate-pulse">SHESAFE...</div>;
-  return user ? children : <Navigate to="/login" />;
+  if (loading) return (
+    <div className="min-h-screen bg-dark-900 flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  return user ? children : <Navigate to="/login" replace />;
 };
 
-function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        <div className="max-w-md mx-auto bg-slate-50 min-h-screen shadow-2xl relative border-x border-slate-200">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
-            <Route path="/trip" element={<ProtectedRoute><LiveTrip /></ProtectedRoute>} />
-            <Route path="/buddies" element={<ProtectedRoute><Buddies /></ProtectedRoute>} />
-            <Route path="/ride" element={<ProtectedRoute><RideVerification /></ProtectedRoute>} />
-            <Route path="/fake-call" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          </Routes>
+// App with providers
+const AppInner = () => {
+  const { user, loading } = useAuth();
 
-          <ToastContainer position="top-center" autoClose={3000} hideProgressBar newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
-        </div>
-      </Router>
-    </AuthProvider>
+  if (loading) return (
+    <div className="min-h-screen bg-dark-900 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-white/50 text-sm">Loading SheSafe…</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Signup />} />
+      <Route path="/track/:trackingId" element={<PublicTracker />} />
+      <Route path="/disguise" element={<Calculator />} />
+
+      {/* Protected routes */}
+      <Route path="/" element={<Protected><Dashboard /></Protected>} />
+      <Route path="/trip" element={<Protected><LiveTrip /></Protected>} />
+      <Route path="/ride" element={<Protected><RideVerification /></Protected>} />
+      <Route path="/buddy" element={<Protected><Buddies /></Protected>} />
+      <Route path="/community" element={<Protected><Community /></Protected>} />
+      <Route path="/routes" element={<Protected><RouteSuggester /></Protected>} />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+};
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <SocketProvider>
+          <AppInner />
+        </SocketProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
-
-export default App;

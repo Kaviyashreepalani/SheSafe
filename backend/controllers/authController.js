@@ -1,77 +1,70 @@
-const User = require("../models/User");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: "30d",
-    });
-};
+const signToken = (id) =>
+    jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-// 📌 Register User
-exports.registerUser = async (req, res) => {
-    const { name, phone, password, emergencyContacts } = req.body;
-
+// POST /api/auth/signup
+exports.signup = async (req, res) => {
     try {
-        const userExists = await User.findOne({ phone });
-        if (userExists) {
-            return res.status(400).json({ message: "User already exists" });
-        }
+        const { name, email, password, phone, emergencyContacts } = req.body;
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        const existingUser = await User.findOne({ email });
+        if (existingUser) return res.status(400).json({ message: 'Email already registered' });
 
-        const user = await User.create({
-            name,
-            phone,
-            password: hashedPassword,
-            emergencyContacts,
+        const user = await User.create({ name, email, password, phone, emergencyContacts: emergencyContacts || [] });
+        const token = signToken(user._id);
+
+        res.status(201).json({
+            token,
+            user: { id: user._id, name: user.name, email: user.email, phone: user.phone, emergencyContacts: user.emergencyContacts },
         });
-
-        if (user) {
-            res.status(201).json({
-                _id: user._id,
-                name: user.name,
-                phone: user.phone,
-                token: generateToken(user._id),
-            });
-        } else {
-            res.status(400).json({ message: "Invalid user data" });
-        }
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: 'Server error', error: err.message });
     }
 };
 
-// 📌 Login User
-exports.loginUser = async (req, res) => {
-    const { phone, password } = req.body;
-
+// POST /api/auth/login
+exports.login = async (req, res) => {
     try {
-        const user = await User.findOne({ phone });
+        const { email, password } = req.body;
+        if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
 
-        if (user && (await user.comparePassword(password))) {
-            res.json({
-                _id: user._id,
-                name: user.name,
-                phone: user.phone,
-                token: generateToken(user._id),
-            });
-        } else {
-            res.status(401).json({ message: "Invalid phone or password" });
-        }
+        const user = await User.findOne({ email }).select('+password');
+        if (!user || !(await user.correctPassword(password)))
+            return res.status(401).json({ message: 'Invalid credentials' });
+
+        const token = signToken(user._id);
+        res.status(200).json({
+            token,
+            user: { id: user._id, name: user.name, email: user.email, phone: user.phone, emergencyContacts: user.emergencyContacts },
+        });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: 'Server error', error: err.message });
     }
 };
 
-// 📌 Get User Profile
-exports.getUserProfile = async (req, res) => {
-    const user = await User.findById(req.user._id).select("-password");
+// GET /api/auth/me
+exports.getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        res.status(200).json({ user });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
-    if (user) {
-        res.json(user);
-    } else {
-        res.status(404).json({ message: "User not found" });
+// PATCH /api/auth/update-contacts
+exports.updateContacts = async (req, res) => {
+    try {
+        const { emergencyContacts } = req.body;
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            { emergencyContacts },
+            { new: true }
+        );
+        res.status(200).json({ emergencyContacts: user.emergencyContacts });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
     }
 };

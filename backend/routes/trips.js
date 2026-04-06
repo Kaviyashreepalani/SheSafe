@@ -1,19 +1,12 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const {
-    createTrip,
-    updateTripLocation,
-    getPublicTrip,
-    endTrip
-} = require("../controllers/tripController");
-const { protect } = require("../middleware/authMiddleware");
+const auth = require('../middleware/authMiddleware');
+const { startTrip, updateTripLocation, markTripSafe, getTripHistory, getPublicTrip } = require('../controllers/tripController');
 
-// Authenticated routes
-router.post("/", protect, createTrip);
-router.put("/location", protect, updateTripLocation);
-router.put("/end", protect, endTrip);
-
-// Public route (for tracking links)
-router.get("/track/:token", getPublicTrip);
+router.post('/start', auth, startTrip);
+router.patch('/:id/location', auth, updateTripLocation);
+router.patch('/:id/safe', auth, markTripSafe);
+router.get('/history', auth, getTripHistory);
+router.get('/track/:trackingId', getPublicTrip); // no auth - public
 
 module.exports = router;

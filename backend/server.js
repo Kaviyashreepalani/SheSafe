@@ -1,74 +1,78 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const http = require("http");
-const { Server } = require("socket.io");
-const morgan = require("morgan");
-const helmet = require("helmet");
-const connectDB = require("./config/db");
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const dotenv = require('dotenv');
 
-// ✅ Initialize DB
-connectDB();
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
+const io = socketIo(server, {
     cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+        methods: ['GET', 'POST'],
+        credentials: true,
+    },
 });
 
-// ✅ Middlewares
-app.use(cors());
-app.use(helmet());
-app.use(morgan("dev"));
+// Middleware
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+}));
 app.use(express.json());
 
-// ✅ Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/sos", require("./routes/sos"));
-app.use("/api/trips", require("./routes/trips"));
-app.use("/api/alerts", require("./routes/alerts"));
-app.use("/api/buddies", require("./routes/buddies"));
+// Make io accessible to routes
+app.set('io', io);
 
-// ✅ Socket.io logic (Basic setup)
-io.on("connection", (socket) => {
-    console.log("⚡ A user connected:", socket.id);
+// Database connection
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('✅ MongoDB connected'))
+    .catch(err => console.error('❌ MongoDB error:', err));
 
-    socket.on("join-trip", (tripId) => {
-        socket.join(tripId);
-        console.log(`📍 User joined trip: ${tripId}`);
+// Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/sos', require('./routes/sos'));
+app.use('/api/trips', require('./routes/trips'));
+app.use('/api/alerts', require('./routes/alerts'));
+app.use('/api/buddies', require('./routes/buddies'));
+app.use('/api/rides', require('./routes/rides'));
+
+// Public tracking route (no auth needed)
+app.use('/api/tracking', require('./routes/tracking'));
+
+// Socket.io for real-time features
+io.on('connection', (socket) => {
+    console.log(`🔌 Client connected: ${socket.id}`);
+
+    // Join a trip tracking room
+    socket.on('join-trip', (tripId) => {
+        socket.join(`trip-${tripId}`);
+        console.log(`Socket ${socket.id} joined trip-${tripId}`);
     });
 
-    socket.on("update-location", (data) => {
-        const { tripId, latitude, longitude } = data;
-        io.to(tripId).emit("location-updated", { latitude, longitude });
+    // Broadcast location update to trip watchers
+    socket.on('location-update', ({ tripId, lat, lng }) => {
+        socket.to(`trip-${tripId}`).emit('location-update', { lat, lng, timestamp: new Date() });
     });
 
-    socket.on("disconnect", () => {
-        console.log("❌ User disconnected");
+    // Buddy chat
+    socket.on('join-buddy-chat', (chatId) => {
+        socket.join(`chat-${chatId}`);
+    });
+
+    socket.on('buddy-message', ({ chatId, message, senderId }) => {
+        io.to(`chat-${chatId}`).emit('buddy-message', { message, senderId, timestamp: new Date() });
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`🔌 Client disconnected: ${socket.id}`);
     });
 });
 
-// ✅ Test route
-app.get("/", (req, res) => {
-    res.send("SheSafe Backend Running 🚀");
-});
-
-// ✅ Error handling
-app.use((req, res) => {
-    res.status(404).json({ error: "Route not found" });
-});
-
-app.use((err, req, res, next) => {
-    console.error("Server Error:", err.stack);
-    res.status(500).json({ error: "Something went wrong" });
-});
-
-// ✅ Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`🚀 SheSafe server running on port ${PORT}`);
 });
-

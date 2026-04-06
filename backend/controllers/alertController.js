@@ -1,55 +1,57 @@
-const Alert = require("../models/Alert");
+const Alert = require('../models/Alert');
 
-// 📌 Post a new alert
-exports.postAlert = async (req, res) => {
-    const { type, description, latitude, longitude } = req.body;
-
+// POST /api/alerts
+exports.createAlert = async (req, res) => {
     try {
+        const { lat, lng, incidentType, description } = req.body;
         const alert = await Alert.create({
-            userId: req.user._id,
-            type,
+            userId: req.user.id,
+            lat,
+            lng,
+            incidentType,
             description,
-            location: { latitude, longitude }
         });
-
+        const io = req.app.get('io');
+        io.emit('new-alert', alert); // real-time broadcast
         res.status(201).json(alert);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: 'Server error', error: err.message });
     }
 };
 
-// 📌 Get all active alerts
+// GET /api/alerts (active only - not expired)
 exports.getAlerts = async (req, res) => {
     try {
-        // Find alerts that haven't expired
-        const alerts = await Alert.find({
-            expiry: { $gt: new Date() }
-        }).sort({ createdAt: -1 });
-
-        res.json(alerts);
+        const alerts = await Alert.find({ expiresAt: { $gt: new Date() } })
+            .populate('userId', 'name')
+            .sort({ createdAt: -1 });
+        res.status(200).json(alerts);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
-// 📌 Upvote alert (Resets expiry by 24h)
+// POST /api/alerts/:id/upvote
 exports.upvoteAlert = async (req, res) => {
-    const { id } = req.params;
-
     try {
-        const alert = await Alert.findById(id);
+        const alert = await Alert.findById(req.params.id);
+        if (!alert) return res.status(404).json({ message: 'Alert not found' });
 
-        if (!alert) {
-            return res.status(404).json({ message: "Alert not found" });
+        if (alert.upvotedBy.includes(req.user.id)) {
+            return res.status(400).json({ message: 'Already upvoted' });
         }
 
         alert.upvotes += 1;
-        // Extend expiry by 24 hours on upvote
-        alert.expiry = new Date(alert.expiry.getTime() + 24 * 60 * 60 * 1000);
-        
+        alert.upvotedBy.push(req.user.id);
+        // Reset expiry to 48 hours from now
+        alert.expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
         await alert.save();
-        res.json(alert);
+
+        const io = req.app.get('io');
+        io.emit('alert-upvoted', { alertId: alert._id, upvotes: alert.upvotes });
+
+        res.status(200).json(alert);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };

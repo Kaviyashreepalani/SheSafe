@@ -1,70 +1,183 @@
-import React, { useState } from "react";
-import { Car, Send, ShieldCheck, Phone, Clipboard } from "lucide-react";
-import axios from "axios";
-import { useAuth } from "../context/AuthContext";
-import { toast } from "react-toastify";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
 
-const RideVerification = () => {
-    const { user } = useAuth();
-    const [details, setDetails] = useState({ plate: "", driver: "", phone: "" });
+const BackArrow = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+        <polyline points="15 18 9 12 15 6" />
+    </svg>
+);
 
-    const handleShare = async () => {
+const vehicleTypes = [
+    { value: 'cab', label: '🚕 Cab', desc: 'Ola, Uber, taxi' },
+    { value: 'auto', label: '🛺 Auto', desc: 'Auto-rickshaw' },
+    { value: 'bus', label: '🚌 Bus', desc: 'Public / private' },
+    { value: 'other', label: '🚗 Other', desc: 'Any vehicle' },
+];
+
+export default function RideVerification() {
+    const navigate = useNavigate();
+    const [form, setForm] = useState({ vehicleNumber: '', vehicleType: '', driverName: '' });
+    const [rides, setRides] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
+    useEffect(() => { fetchRides(); }, []);
+
+    const fetchRides = async () => {
         try {
-            await axios.post(
-                "http://localhost:5000/api/rides",
-                { vehicleDetails: details },
-                { headers: { Authorization: `Bearer ${user.token}` } }
-            );
-            toast.success("Ride details shared with contacts!");
+            const res = await axios.get('/api/rides');
+            setRides(res.data);
+        } catch { }
+    };
+
+    const getLocation = () =>
+        new Promise((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(
+                p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+                reject, { enableHighAccuracy: true }
+            )
+        );
+
+    const handleSubmit = async () => {
+        if (!form.vehicleNumber || !form.vehicleType) { setError('Vehicle number and type are required.'); return; }
+        setError(''); setLoading(true);
+        try {
+            const { lat, lng } = await getLocation();
+            await axios.post('/api/rides', { ...form, lat, lng });
+            setSuccess('Ride logged! Emergency contacts have been notified via SMS.');
+            setForm({ vehicleNumber: '', vehicleType: '', driverName: '' });
+            fetchRides();
+            setTimeout(() => setSuccess(''), 4000);
         } catch (err) {
-            toast.error("Failed to share ride details");
+            setError(err.response?.data?.message || 'Failed to log ride. Check GPS permissions.');
+        } finally {
+            setLoading(false);
         }
     };
 
+    const reshareRide = async (rideId) => {
+        try {
+            await axios.post(`/api/rides/${rideId}/reshare`);
+            setSuccess('Ride details reshared with contacts!');
+            setTimeout(() => setSuccess(''), 3000);
+        } catch { }
+    };
+
     return (
-        <div className="min-h-screen bg-slate-50 p-6 flex flex-col items-center justify-center">
-            <div className="w-full max-w-sm">
-                <div className="flex flex-col items-center text-center mb-8">
-                    <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-[32px] flex items-center justify-center mb-4 shadow-lg">
-                        <Car size={40} />
+        <div className="min-h-screen bg-dark-900 font-body">
+            <header className="sticky top-0 z-30 bg-dark-900/80 backdrop-blur-xl border-b border-white/[0.06] px-5 py-4 flex items-center gap-3">
+                <button onClick={() => navigate('/')} className="text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-all">
+                    <BackArrow />
+                </button>
+                <h1 className="font-display text-xl font-bold text-white">Ride Verification</h1>
+            </header>
+
+            <main className="max-w-lg mx-auto px-4 pt-6 pb-10 space-y-6 animate-fade-in">
+                {/* Log new ride */}
+                <div className="card space-y-5">
+                    <div>
+                        <h2 className="section-title">Log This Ride</h2>
+                        <p className="text-sm text-white/40 mt-1">Vehicle details will be sent to all emergency contacts instantly.</p>
                     </div>
-                    <h2 className="text-3xl font-black text-slate-800 tracking-tight">Ride Verification</h2>
-                    <p className="text-slate-500 font-medium italic">Instantly log vehicle info & notify contacts.</p>
+
+                    <AnimatePresence>
+                        {error && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                                className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</motion.div>
+                        )}
+                        {success && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                                className="bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 text-green-400 text-sm">✓ {success}</motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Vehicle type selector */}
+                    <div>
+                        <label className="label">Vehicle Type *</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {vehicleTypes.map(vt => (
+                                <button
+                                    key={vt.value}
+                                    onClick={() => setForm(p => ({ ...p, vehicleType: vt.value }))}
+                                    className={`p-3 rounded-xl border text-left transition-all ${form.vehicleType === vt.value ? 'border-primary-500 bg-primary-600/10' : 'border-white/10 bg-dark-700 hover:border-white/20'}`}
+                                >
+                                    <p className="text-sm font-medium text-white">{vt.label}</p>
+                                    <p className="text-xs text-white/40 mt-0.5">{vt.desc}</p>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="label">Vehicle Registration Number *</label>
+                        <input
+                            className="input-field uppercase"
+                            placeholder="TN 01 AB 1234"
+                            value={form.vehicleNumber}
+                            onChange={e => setForm(p => ({ ...p, vehicleNumber: e.target.value.toUpperCase() }))}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="label">Driver Name (optional)</label>
+                        <input
+                            className="input-field"
+                            placeholder="e.g. Rajan"
+                            value={form.driverName}
+                            onChange={e => setForm(p => ({ ...p, driverName: e.target.value }))}
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                        {loading
+                            ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending…</>
+                            : '📤 Log Ride & Notify Contacts'
+                        }
+                    </button>
                 </div>
 
-                <div className="bg-white p-8 rounded-[40px] shadow-xl border border-slate-100 flex flex-col gap-4">
-                    <div className="relative">
-                        <Clipboard size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Vehicle Number (e.g. MH01AB1234)"
-                            value={details.plate}
-                            onChange={(e) => setDetails({ ...details, plate: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/50"
-                        />
+                {/* Ride history */}
+                {rides.length > 0 && (
+                    <div className="card space-y-1">
+                        <h3 className="section-title text-sm mb-4">Ride Log</h3>
+                        {rides.map((ride, i) => (
+                            <motion.div
+                                key={ride._id}
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                className="flex items-center justify-between py-3 border-b border-white/5 last:border-0"
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center text-base shrink-0">
+                                        {ride.vehicleType === 'cab' ? '🚕' : ride.vehicleType === 'auto' ? '🛺' : ride.vehicleType === 'bus' ? '🚌' : '🚗'}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-mono font-medium text-white/90">{ride.vehicleNumber}</p>
+                                        <p className="text-xs text-white/40">
+                                            {ride.driverName ? `${ride.driverName} · ` : ''}
+                                            {new Date(ride.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => reshareRide(ride._id)}
+                                    className="text-xs text-primary-400 hover:text-primary-300 px-3 py-1.5 rounded-lg hover:bg-primary-600/10 transition-all"
+                                >
+                                    Reshare
+                                </button>
+                            </motion.div>
+                        ))}
                     </div>
-                    <div className="relative">
-                        <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Driver Name (Optional)"
-                            value={details.driver}
-                            onChange={(e) => setDetails({ ...details, driver: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/50"
-                        />
-                    </div>
-                    <button
-                        onClick={handleShare}
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        <ShieldCheck size={20} />
-                        VERIFY & NOTIFY
-                    </button>
-                    <p className="text-[10px] text-slate-400 text-center uppercase font-bold tracking-widest mt-2 italic">Details are logged in our secure database</p>
-                </div>
-            </div>
+                )}
+            </main>
         </div>
     );
-};
-
-export default RideVerification;
+}

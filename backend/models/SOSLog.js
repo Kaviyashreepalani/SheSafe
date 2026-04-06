@@ -1,20 +1,24 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const sosLogSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    location: {
-        latitude: { type: Number, required: true },
-        longitude: { type: Number, required: true }
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    lat: { type: Number, required: true },
+    lng: { type: Number, required: true },
+    status: {
+        type: String,
+        enum: ['active', 'cancelled', 'resolved'],
+        default: 'active',
     },
-    source: { type: String, default: "Manual" },
-    contactsNotified: [
+    locations: [
         {
-            name: { type: String },
-            phone: { type: String }
-        }
+            lat: Number,
+            lng: Number,
+            timestamp: { type: Date, default: Date.now },
+        },
     ],
-    status: { type: String, enum: ["Active", "Resolved", "Cancelled"], default: "Active" },
-    createdAt: { type: Date, default: Date.now }
+    cancelledAt: Date,
+    resolvedAt: Date,
+    createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("SOSLog", sosLogSchema);
+module.exports = mongoose.model('SOSLog', sosLogSchema);
