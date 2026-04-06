@@ -68,7 +68,7 @@ Scores are computed client-side from the alerts fetched via `/api/alerts` and up
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18 + Vite, Tailwind CSS, Framer Motion |
+| Frontend | React 18 + Vite, Tailwind CSS v4, Framer Motion |
 | Backend | Node.js, Express.js |
 | Database | MongoDB (Mongoose) |
 | Real-time | Socket.io |
@@ -104,7 +104,7 @@ npm run dev
 ### 3. Frontend
 ```bash
 cd frontend
-npm install
+npm install  # Includes new @tailwindcss/postcss for v4 compatibility
 cp .env.example .env
 # Add VITE_MAPBOX_TOKEN to .env (optional)
 npm run dev
@@ -162,7 +162,7 @@ VITE_BACKEND_URL=http://localhost:5000
 | PATCH | `/api/trips/:id/location` | ✅ | Stream location update |
 | PATCH | `/api/trips/:id/safe` | ✅ | Mark arrived safely |
 | GET | `/api/trips/history` | ✅ | Trip history |
-| GET | `/api/trips/track/:id` | — | **Public** tracker (no auth) |
+| GET | `/api/tracking/:id` | — | **Public** tracker (no auth) |
 
 ### Rides
 | Method | Route | Auth | Description |
@@ -181,9 +181,9 @@ VITE_BACKEND_URL=http://localhost:5000
 ### Buddies
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| POST | `/api/buddies/search` | ✅ | Search route buddies |
-| POST | `/api/buddies/accept` | ✅ | Accept buddy + open chat |
-| GET | `/api/buddies/my` | ✅ | Get own buddy request |
+| POST | `/api/buddies/` | ✅ | Create/Update buddy request |
+| GET | `/api/buddies/find` | ✅ | Find matching buddies on route |
+| PUT | `/api/buddies/match/:id` | ✅ | Match with a buddy + chat |
 
 ---
 
