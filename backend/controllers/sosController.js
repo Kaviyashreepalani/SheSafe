@@ -22,8 +22,14 @@ exports.triggerSOS = async (req, res) => {
 
         // Send SMS to all emergency contacts
         const contactPhones = user.emergencyContacts.map(c => c.phone);
+        console.log(`🚨 SOS Triggered by ${user.name}.`);
+        console.log(`👥 Alerting ${contactPhones.length} contacts:`, contactPhones);
+        
         if (contactPhones.length > 0) {
-            await sendSOSAlert(contactPhones, user.name, lat, lng);
+            const smsResults = await sendSOSAlert(contactPhones, user.name, lat, lng);
+            console.log('📬 Aggregated SMS Results:', smsResults);
+        } else {
+            console.log('⚠️ No emergency contacts found for user. Skipping SMS.');
         }
 
         // Emit real-time SOS to any connected admin/family dashboard

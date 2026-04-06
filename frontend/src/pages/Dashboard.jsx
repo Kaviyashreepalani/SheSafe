@@ -52,6 +52,14 @@ const Icon = {
       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.62 4.35 2 2 0 0 1 3.62 2.18l3-.02a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.29 6.29l1.09-1.09a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
     </svg>
   ),
+  UserPlus: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="8.5" cy="7" r="4" />
+      <line x1="20" y1="8" x2="20" y2="14" />
+      <line x1="17" y1="11" x2="23" y2="11" />
+    </svg>
+  ),
 };
 
 // SOS Button Component with countdown
@@ -246,6 +254,7 @@ export default function Dashboard() {
     { icon: <Icon.Users />, label: 'Buddy Match', desc: 'Find travel companions on your route', to: '/buddy', color: 'bg-purple-500/20 text-purple-400' },
     { icon: <Icon.AlertTriangle />, label: 'Safety Board', desc: 'View & report community incidents', to: '/community', color: 'bg-orange-500/20 text-orange-400' },
     { icon: <Icon.Navigation />, label: 'Safe Routes', desc: 'Get safest path avoiding danger zones', to: '/routes', color: 'bg-green-500/20 text-green-400' },
+    { icon: <Icon.UserPlus />, label: 'Emergency Contacts', desc: 'Manage your safety circle', to: '/contacts', color: 'bg-rose-500/20 text-rose-400' },
     { icon: <Icon.Phone />, label: 'Fake Call', desc: 'Schedule a fake incoming call', to: '/?fakecall=1', color: 'bg-teal-500/20 text-teal-400' },
   ];
 
@@ -259,7 +268,8 @@ export default function Dashboard() {
           </div>
           <span className="font-display text-xl font-bold text-white tracking-tight">SheSafe</span>
         </div>
-        <button onClick={logout} className="text-white/40 hover:text-white/80 transition-colors p-2 rounded-lg hover:bg-white/5">
+        <button onClick={logout} className="text-white/40 hover:text-white/80 transition-colors p-2 rounded-lg hover:bg-white/5 flex items-center gap-2 text-xs">
+          <span className="hidden sm:inline">Logout</span>
           <Icon.LogOut />
         </button>
       </header>
@@ -313,22 +323,34 @@ export default function Dashboard() {
         </section>
 
         {/* Emergency contacts quick view */}
-        {user?.emergencyContacts?.length > 0 && (
-          <section className="card space-y-3">
-            <p className="text-xs uppercase tracking-widest text-white/40">Emergency Contacts</p>
-            {user.emergencyContacts.slice(0, 3).map((c, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary-600/20 flex items-center justify-center text-primary-400 text-sm font-bold">
-                  {c.name[0]}
+        <section className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-widest text-white/40 font-bold">Emergency Contacts</p>
+            <button onClick={() => navigate('/contacts')} className="text-primary-400 text-xs hover:text-primary-300 font-medium transition-colors">
+              Manage →
+            </button>
+          </div>
+          
+          <div className="space-y-3">
+            {user?.emergencyContacts?.length > 0 ? (
+              user.emergencyContacts.slice(0, 3).map((c, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary-600/10 flex items-center justify-center text-primary-400 text-xs font-bold border border-primary-600/20">
+                    {c.name[0]}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white/90">{c.name}</p>
+                    <p className="text-[10px] text-white/40 uppercase tracking-wider">{c.relation} · {c.phone}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-white/90">{c.name}</p>
-                  <p className="text-xs text-white/40">{c.phone} · {c.relation}</p>
-                </div>
+              ))
+            ) : (
+              <div className="py-2">
+                <p className="text-xs text-white/30 italic">No contacts added. Tap 'Manage' to add at least one for SOS alerts.</p>
               </div>
-            ))}
-          </section>
-        )}
+            )}
+          </div>
+        </section>
       </main>
     </div>
   );

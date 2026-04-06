@@ -12,7 +12,8 @@ exports.signup = async (req, res) => {
         const existingUser = await User.findOne({ email });
         if (existingUser) return res.status(400).json({ message: 'Email already registered' });
 
-        const user = await User.create({ name, email, password, phone, emergencyContacts: emergencyContacts || [] });
+        const contacts = (emergencyContacts || []).filter(c => c.name && c.phone);
+        const user = await User.create({ name, email, password, phone, emergencyContacts: contacts });
         const token = signToken(user._id);
 
         res.status(201).json({

@@ -11,6 +11,7 @@ import Buddies from './pages/Buddies';
 import Community from './pages/Community';
 import RouteSuggester from './pages/RouteSuggester';
 import PublicTracker from './pages/PublicTracker';
+import EmergencyContacts from './pages/EmergencyContacts';
 import Calculator from './components/Calculator';
 
 // Protected route wrapper
@@ -52,6 +53,7 @@ const AppInner = () => {
       <Route path="/buddy" element={<Protected><Buddies /></Protected>} />
       <Route path="/community" element={<Protected><Community /></Protected>} />
       <Route path="/routes" element={<Protected><RouteSuggester /></Protected>} />
+      <Route path="/contacts" element={<Protected><EmergencyContacts /></Protected>} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

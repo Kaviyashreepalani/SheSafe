@@ -26,8 +26,8 @@ const userSchema = new mongoose.Schema({
     },
     emergencyContacts: [
         {
-            name: { type: String, required: true },
-            phone: { type: String, required: true }, // E.164 format e.g. +919876543210
+            name: { type: String },
+            phone: { type: String }, // E.164 format e.g. +919876543210
             relation: { type: String },
         },
     ],

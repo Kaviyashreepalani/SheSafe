@@ -15,16 +15,23 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
  */
 const sendSMS = async (phoneNumbers, message) => {
     const results = [];
-    for (const number of phoneNumbers) {
+    for (let number of phoneNumbers) {
+        // Ensure E.164 format (must start with +)
+        if (!number.startsWith('+')) {
+            number = `+${number.trim()}`;
+        }
+        
         try {
+            console.log(`📤 Sending SMS to: ${number}...`);
             const msg = await client.messages.create({
                 body: message,
                 from: TWILIO_PHONE,
                 to: number,
             });
+            console.log(`✅ SMS Sent! SID: ${msg.sid}`);
             results.push({ number, sid: msg.sid, status: 'sent' });
         } catch (err) {
-            console.error(`SMS failed for ${number}:`, err.message);
+            console.error(`❌ SMS failed for ${number}:`, err.message);
             results.push({ number, status: 'failed', error: err.message });
         }
     }
@@ -36,7 +43,7 @@ const sendSMS = async (phoneNumbers, message) => {
  */
 const sendSOSAlert = async (contacts, userName, lat, lng) => {
     const mapsLink = `https://maps.google.com/?q=${lat},${lng}`;
-    const message = `🚨 SOS ALERT from ${userName}!\n\nShe may be in danger. Her current location:\n${mapsLink}\n\nThis alert was sent via SheSafe. Location updates every 60 seconds.`;
+    const message = `SOS ALERT FROM ${userName.toUpperCase()}: She may be in danger. Her location: ${mapsLink}. Please check on her now. Sent via SheSafe.`;
     return sendSMS(contacts, message);
 };
 
@@ -45,7 +52,7 @@ const sendSOSAlert = async (contacts, userName, lat, lng) => {
  */
 const sendRideAlert = async (contacts, userName, rideData, lat, lng) => {
     const mapsLink = `https://maps.google.com/?q=${lat},${lng}`;
-    const message = `🚗 Ride Alert from ${userName}\n\nVehicle: ${rideData.vehicleNumber}\nType: ${rideData.vehicleType}\nDriver: ${rideData.driverName || 'Not provided'}\n\nBoarding location: ${mapsLink}\nTime: ${new Date().toLocaleString()}`;
+    const message = `RIDE ALERT FROM ${userName.toUpperCase()}: Boarding ${rideData.vehicleType} ${rideData.vehicleNumber}. Driver: ${rideData.driverName || 'Not provided'}. Location: ${mapsLink}.`;
     return sendSMS(contacts, message);
 };
 
@@ -54,7 +61,7 @@ const sendRideAlert = async (contacts, userName, rideData, lat, lng) => {
  */
 const sendTripStartAlert = async (contacts, userName, destination, trackingId) => {
     const trackingLink = `${FRONTEND_URL}/track/${trackingId}`;
-    const message = `📍 ${userName} has started a trip to ${destination}.\n\nTrack her live here (no login needed):\n${trackingLink}\n\nShe will mark herself safe upon arrival.`;
+    const message = `TRIP START FROM ${userName.toUpperCase()}: Heading to ${destination}. Track live: ${trackingLink}. Will notify you upon safe arrival.`;
     return sendSMS(contacts, message);
 };
 
@@ -63,7 +70,7 @@ const sendTripStartAlert = async (contacts, userName, destination, trackingId) =
  */
 const sendTripOverdueAlert = async (contacts, userName, destination, lat, lng) => {
     const mapsLink = `https://maps.google.com/?q=${lat},${lng}`;
-    const message = `⚠️ ALERT: ${userName} has not marked herself safe after reaching ${destination}.\n\nLast known location: ${mapsLink}\n\nPlease check on her immediately.`;
+    const message = `ALERT FROM ${userName.toUpperCase()}: She has not reached ${destination} on time. Last known location: ${mapsLink}. Please check on her immediately.`;
     return sendSMS(contacts, message);
 };
 
